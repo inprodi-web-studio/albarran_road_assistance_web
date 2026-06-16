@@ -46,6 +46,12 @@ const loadGoogleMaps = (apiKey: string) => {
 export const MapPanel = ({ points }: MapPanelProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const googleMapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const hasAutoFitRef = useRef(false);
+  const hasUserMovedMapRef = useRef(false);
+  const isProgrammaticMoveRef = useRef(false);
   const [mapError, setMapError] = useState(false);
   const validPoints = useMemo(
     () =>
@@ -70,42 +76,97 @@ export const MapPanel = ({ points }: MapPanelProps) => {
         }
 
         const [firstPoint] = validPoints;
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: firstPoint.latitude, lng: firstPoint.longitude },
-          zoom: validPoints.length > 1 ? 13 : 16,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          streetViewControl: false,
-        });
+        let map = googleMapRef.current;
+
+        if (!map) {
+          map = new window.google.maps.Map(mapRef.current, {
+            center: { lat: firstPoint.latitude, lng: firstPoint.longitude },
+            zoom: validPoints.length > 1 ? 13 : 16,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            streetViewControl: false,
+          });
+          googleMapRef.current = map;
+
+          map.addListener("dragstart", () => {
+            hasUserMovedMapRef.current = true;
+          });
+          map.addListener("zoom_changed", () => {
+            if (!isProgrammaticMoveRef.current) {
+              hasUserMovedMapRef.current = true;
+            }
+          });
+        }
+
         const bounds = new window.google.maps.LatLngBounds();
+        const activeKeys = new Set<string>();
 
         validPoints.forEach((point, index) => {
+          const key = point.label;
           const position = {
             lat: point.latitude,
             lng: point.longitude,
           };
 
+          activeKeys.add(key);
           bounds.extend(position);
-          new window.google.maps.Marker({
-            map,
-            position,
-            label: String(index + 1),
-            title: point.label,
-          });
+
+          const existingMarker = markersRef.current.get(key);
+
+          if (existingMarker) {
+            existingMarker.setPosition(position);
+            existingMarker.setLabel(String(index + 1));
+            existingMarker.setTitle(point.label);
+            return;
+          }
+
+          markersRef.current.set(
+            key,
+            new window.google.maps.Marker({
+              map,
+              position,
+              label: String(index + 1),
+              title: point.label,
+            }),
+          );
+        });
+
+        markersRef.current.forEach((marker, key) => {
+          if (!activeKeys.has(key)) {
+            marker.setMap(null);
+            markersRef.current.delete(key);
+          }
         });
 
         if (validPoints.length > 1) {
-          new window.google.maps.Polyline({
-            map,
-            path: validPoints.map((point) => ({
+          const path = validPoints.map((point) => ({
               lat: point.latitude,
               lng: point.longitude,
-            })),
-            strokeColor: "#0f766e",
-            strokeOpacity: 0.9,
-            strokeWeight: 4,
-          });
-          map.fitBounds(bounds, 64);
+          }));
+
+          if (polylineRef.current) {
+            polylineRef.current.setPath(path);
+          } else {
+            polylineRef.current = new window.google.maps.Polyline({
+              map,
+              path,
+              strokeColor: "#0f766e",
+              strokeOpacity: 0.9,
+              strokeWeight: 4,
+            });
+          }
+
+          if (!hasAutoFitRef.current && !hasUserMovedMapRef.current) {
+            isProgrammaticMoveRef.current = true;
+            map.fitBounds(bounds, 64);
+            window.setTimeout(() => {
+              isProgrammaticMoveRef.current = false;
+            }, 0);
+            hasAutoFitRef.current = true;
+          }
+        } else if (polylineRef.current) {
+          polylineRef.current.setMap(null);
+          polylineRef.current = null;
         }
       })
       .catch(() => setMapError(true));
