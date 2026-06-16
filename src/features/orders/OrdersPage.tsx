@@ -49,6 +49,26 @@ const LocationBadge = ({ order }: { order: AdminOrder }) => {
   return <Badge variant="success">En vivo</Badge>;
 };
 
+const formatMeters = (value?: number | null) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "Sin registro";
+  }
+
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(2)} km`;
+  }
+
+  return `${Math.round(value)} m`;
+};
+
+const formatBoolean = (value?: boolean | null) => {
+  if (value == null) {
+    return "Sin registro";
+  }
+
+  return value ? "Si" : "No";
+};
+
 const Summary = ({ orders }: { orders: AdminOrder[] }) => {
   const activeLocations = orders.filter(
     (order) => order.agentLocation && !order.agentLocation.stale,
@@ -359,6 +379,51 @@ export const OrdersPage = () => {
                     </span>
                   </div>
                 </div>
+                {selectedOrder.stage === "completed" ||
+                selectedOrder.completedAt ||
+                selectedOrder.completionLocation ? (
+                  <div className="rounded-lg border p-4 text-sm">
+                    <div className="mb-2 font-medium">Finalizacion</div>
+                    <dl className="grid gap-2 text-muted-foreground">
+                      <div>
+                        <dt>Fecha/hora finalizada</dt>
+                        <dd className="font-medium text-foreground">
+                          {selectedOrder.completedAt
+                            ? formatDate(selectedOrder.completedAt)
+                            : "Sin registro"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Coordenadas de finalizacion</dt>
+                        <dd className="font-medium text-foreground">
+                          {parseCoordinates(selectedOrder.completionLocation)
+                            ? `${parseCoordinates(selectedOrder.completionLocation)?.latitude.toFixed(6)}, ${parseCoordinates(selectedOrder.completionLocation)?.longitude.toFixed(6)}`
+                            : "Sin coordenadas"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Distancia al cliente</dt>
+                        <dd className="font-medium text-foreground">
+                          {formatMeters(selectedOrder.completionDistanceMeters)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Llego dentro del rango</dt>
+                        <dd className="font-medium text-foreground">
+                          {formatBoolean(selectedOrder.completionWithinRadius)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Finalizo fuera del rango con confirmacion</dt>
+                        <dd className="font-medium text-foreground">
+                          {formatBoolean(
+                            selectedOrder.completionConfirmedOutsideRadius,
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : null}
               </div>
               <MapPanel points={mapPoints} />
             </div>

@@ -109,6 +109,12 @@ export type AdminOrder = {
   location?: Coordinates | null;
   agent?: Agent | null;
   agentLocation?: AgentLocation | null;
+  completedAt?: string | null;
+  completionLocation?: Coordinates | null;
+  completionDistanceMeters?: number | null;
+  completionRadiusMeters?: number | null;
+  completionWithinRadius?: boolean | null;
+  completionConfirmedOutsideRadius?: boolean | null;
   createdAt?: string;
   updatedAt?: string;
 };
