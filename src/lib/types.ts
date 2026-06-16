@@ -66,6 +66,7 @@ export type Agent = {
   middleName?: string;
   lastName?: string;
   phone?: string;
+  firebaseUid?: string;
   email?: string;
   username?: string;
   isBusy?: boolean;

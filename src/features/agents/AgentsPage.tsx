@@ -278,12 +278,13 @@ export const AgentsPage = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse">
+            <table className="w-full min-w-[980px] border-collapse">
               <thead className="bg-muted/70 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="table-cell">Agente</th>
                   <th className="table-cell">Correo</th>
                   <th className="table-cell">Telefono</th>
+                  <th className="table-cell">Firebase</th>
                   <th className="table-cell">Estado</th>
                   <th className="table-cell">Alta</th>
                 </tr>
@@ -291,13 +292,13 @@ export const AgentsPage = () => {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td className="table-cell text-muted-foreground" colSpan={5}>
+                    <td className="table-cell text-muted-foreground" colSpan={6}>
                       Cargando agentes...
                     </td>
                   </tr>
                 ) : agents.length === 0 ? (
                   <tr>
-                    <td className="table-cell text-muted-foreground" colSpan={5}>
+                    <td className="table-cell text-muted-foreground" colSpan={6}>
                       No hay agentes para este filtro.
                     </td>
                   </tr>
@@ -320,6 +321,11 @@ export const AgentsPage = () => {
                       </td>
                       <td className="table-cell text-sm">
                         {agent.phone || "Sin telefono"}
+                      </td>
+                      <td className="table-cell">
+                        <div className="max-w-[180px] truncate text-xs text-muted-foreground">
+                          {agent.firebaseUid || "Sin UID"}
+                        </div>
                       </td>
                       <td className="table-cell">
                         <AgentStatusBadge agent={agent} />
