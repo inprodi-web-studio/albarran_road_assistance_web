@@ -1,4 +1,4 @@
-import { ClipboardList, LogOut, MapPinned, ShieldCheck, UserRoundPlus } from "lucide-react";
+import { ClipboardList, LogOut, MapPinned, UserRoundPlus } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
@@ -38,13 +38,11 @@ export const AdminShell = () => {
     <div className="min-h-screen bg-zinc-50">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-white lg:block">
         <div className="flex h-16 items-center gap-3 border-b px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Auxilio Vial</p>
-            <p className="text-xs text-muted-foreground">Administracion</p>
-          </div>
+          <img
+            alt="Albarran"
+            className="h-9 w-32 shrink-0 object-contain"
+            src="/albarran-logo.png"
+          />
         </div>
         <nav className="grid gap-1 p-3">
           {navigation.map((item) => (
@@ -67,9 +65,11 @@ export const AdminShell = () => {
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-white/95 px-4 backdrop-blur lg:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground lg:hidden">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+            <img
+              alt="Albarran"
+              className="h-8 w-24 shrink-0 object-contain lg:hidden"
+              src="/albarran-logo.png"
+            />
             <div>
               <p className="text-sm font-medium">{user?.email}</p>
               <p className="text-xs text-muted-foreground">

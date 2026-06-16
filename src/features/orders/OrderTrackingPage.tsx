@@ -9,7 +9,6 @@ import {
   MapPinned,
   Phone,
   RefreshCw,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -146,9 +145,11 @@ export const OrderTrackingPage = () => {
       <header className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+            <img
+              alt="Albarran"
+              className="h-10 w-28 shrink-0 object-contain sm:w-32"
+              src="/albarran-logo.png"
+            />
             <div>
               <p className="text-sm font-semibold">Auxilio Vial</p>
               <p className="text-xs text-muted-foreground">

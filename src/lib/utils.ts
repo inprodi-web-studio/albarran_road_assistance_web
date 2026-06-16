@@ -44,9 +44,16 @@ export const formatDate = (value?: string | null) => {
     return "Sin fecha";
   }
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+    timeZoneName: "short",
   }).format(date);
 };
 

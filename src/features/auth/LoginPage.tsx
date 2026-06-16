@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
@@ -40,11 +40,13 @@ export const LoginPage = () => {
         className="admin-panel grid w-full max-w-md gap-5 p-6"
         onSubmit={onSubmit}
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div>
+        <div className="grid justify-items-center gap-3 text-center">
+          <img
+            alt="Albarran"
+            className="h-16 w-56 object-contain"
+            src="/albarran-logo.png"
+          />
+          <div className="grid gap-1">
             <h1 className="text-xl font-semibold">Auxilio Vial Admin</h1>
             <p className="text-sm text-muted-foreground">
               Acceso administrativo
