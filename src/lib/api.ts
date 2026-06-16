@@ -6,11 +6,15 @@ import {
 import type { RootState } from "@/app/store";
 import type {
   AdminOrder,
+  Agent,
+  AgentStatus,
   AssistanceRequest,
+  CreateAgentPayload,
   LoginPayload,
   LoginResponse,
   OrderStage,
   PaginatedResponse,
+  PublicOrder,
   RequestStatus,
 } from "@/lib/types";
 
@@ -54,7 +58,7 @@ export const getErrorMessage = (error: unknown) => {
 export const api = createApi({
   reducerPath: "adminApi",
   baseQuery,
-  tagTypes: ["Requests", "Request", "Orders", "Order"],
+  tagTypes: ["Requests", "Request", "Orders", "Order", "Agents"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginPayload>({
       query: (body) => ({
@@ -105,13 +109,40 @@ export const api = createApi({
       query: (id) => `/admin/orders/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Order", id }],
     }),
+    getPublicOrder: builder.query<PublicOrder, string>({
+      query: (documentId) => `/orders/public/${documentId}`,
+      providesTags: (_result, _error, documentId) => [
+        { type: "Order", id: `public-${documentId}` },
+      ],
+    }),
+    getAgents: builder.query<
+      PaginatedResponse<Agent>,
+      { status: AgentStatus; page: number; pageSize: number; search?: string }
+    >({
+      query: ({ status, page, pageSize, search }) => ({
+        url: "/admin/agents",
+        params: toQuery({ status, page, pageSize, search }),
+      }),
+      providesTags: ["Agents"],
+    }),
+    createAgent: builder.mutation<Agent, CreateAgentPayload>({
+      query: (body) => ({
+        url: "/admin/agents",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Agents"],
+    }),
   }),
 });
 
 export const {
+  useCreateAgentMutation,
   useApproveRequestMutation,
+  useGetAgentsQuery,
   useGetOrderQuery,
   useGetOrdersQuery,
+  useGetPublicOrderQuery,
   useGetRequestQuery,
   useGetRequestsQuery,
   useLoginMutation,

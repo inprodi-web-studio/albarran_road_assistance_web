@@ -63,10 +63,29 @@ export type AssistanceRequest = {
 export type Agent = {
   id: number;
   name?: string;
+  middleName?: string;
   lastName?: string;
+  phone?: string;
   email?: string;
+  username?: string;
   isBusy?: boolean;
+  confirmed?: boolean;
   blocked?: boolean;
+  status?: AgentStatus;
+  role?: AdminRole | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AgentStatus = "available" | "busy" | "blocked" | "all";
+
+export type CreateAgentPayload = {
+  name: string;
+  middleName?: string;
+  lastName: string;
+  phone?: string;
+  email: string;
+  password: string;
 };
 
 export type AgentLocation = {
@@ -88,6 +107,31 @@ export type AdminOrder = {
   customer?: Customer | null;
   location?: Coordinates | null;
   agent?: Agent | null;
+  agentLocation?: AgentLocation | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PublicOrderAgent = {
+  name?: string;
+  lastName?: string;
+  phone?: string;
+};
+
+export type PublicOrderCustomer = {
+  name?: string;
+};
+
+export type PublicOrder = {
+  id: number;
+  documentId?: string;
+  service?: ServiceType;
+  subService?: string;
+  autoInfo?: string;
+  stage: Exclude<OrderStage, "all">;
+  customer?: PublicOrderCustomer | null;
+  location?: Coordinates | null;
+  agent?: PublicOrderAgent | null;
   agentLocation?: AgentLocation | null;
   createdAt?: string;
   updatedAt?: string;

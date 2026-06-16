@@ -1,20 +1,26 @@
-import { ClipboardList, LogOut, MapPinned, ShieldCheck } from "lucide-react";
+import { ClipboardList, LogOut, MapPinned, ShieldCheck, UserRoundPlus } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/authSlice";
 import { cn } from "@/lib/utils";
+import { adminPaths } from "@/routes/paths";
 
 const navigation = [
   {
-    to: "/solicitudes",
+    to: adminPaths.requests,
     label: "Solicitudes",
     icon: ClipboardList,
   },
   {
-    to: "/ordenes",
+    to: adminPaths.orders,
     label: "Ordenes",
     icon: MapPinned,
+  },
+  {
+    to: adminPaths.agents,
+    label: "Agentes",
+    icon: UserRoundPlus,
   },
 ];
 
@@ -25,7 +31,7 @@ export const AdminShell = () => {
 
   const onLogout = () => {
     dispatch(logout());
-    navigate("/login", { replace: true });
+    navigate(adminPaths.login, { replace: true });
   };
 
   return (

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { setCredentials } from "@/features/auth/authSlice";
 import { getErrorMessage, useLoginMutation } from "@/lib/api";
+import { adminPaths } from "@/routes/paths";
 
 export const LoginPage = () => {
   const dispatch = useAppDispatch();
@@ -17,7 +18,7 @@ export const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   if (token) {
-    return <Navigate replace to="/solicitudes" />;
+    return <Navigate replace to={adminPaths.requests} />;
   }
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -27,7 +28,7 @@ export const LoginPage = () => {
     try {
       const response = await login({ email, password }).unwrap();
       dispatch(setCredentials(response));
-      navigate("/solicitudes", { replace: true });
+      navigate(adminPaths.requests, { replace: true });
     } catch (currentError) {
       setError(getErrorMessage(currentError));
     }
