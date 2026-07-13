@@ -26,6 +26,7 @@ export const requestStatusLabels: Record<Exclude<RequestStatus, "all">, string> 
 
 export const orderStageLabels: Record<Exclude<OrderStage, "all">, string> = {
   opened: "Abierta",
+  queued: "En espera",
   cancelled: "Cancelada",
   completed: "Completada",
 };

@@ -8,6 +8,7 @@ import type {
   AdminOrder,
   Agent,
   AgentStatus,
+  AssignmentCandidatesResponse,
   AssistanceRequest,
   CreateAgentPayload,
   LoginPayload,
@@ -58,7 +59,7 @@ export const getErrorMessage = (error: unknown) => {
 export const api = createApi({
   reducerPath: "adminApi",
   baseQuery,
-  tagTypes: ["Requests", "Request", "Orders", "Order", "Agents"],
+  tagTypes: ["Requests", "Request", "Orders", "Order", "Agents", "AssignmentCandidates"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginPayload>({
       query: (body) => ({
@@ -109,6 +110,41 @@ export const api = createApi({
       query: (id) => `/admin/orders/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Order", id }],
     }),
+    getAssignmentCandidates: builder.query<AssignmentCandidatesResponse, number>({
+      query: (id) => `/admin/orders/${id}/assignment-candidates`,
+      providesTags: (_result, _error, id) => [
+        { type: "AssignmentCandidates", id },
+      ],
+    }),
+    reassignOrder: builder.mutation<
+      AdminOrder,
+      { id: number; comment: string; agentId?: number; automatic?: boolean }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/admin/orders/${id}/reassign`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        "Orders",
+        "Agents",
+        { type: "Order", id },
+        { type: "AssignmentCandidates", id },
+      ],
+    }),
+    cancelOrder: builder.mutation<AdminOrder, { id: number; comment: string }>({
+      query: ({ id, comment }) => ({
+        url: `/admin/orders/${id}/cancel`,
+        method: "POST",
+        body: { comment },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        "Orders",
+        "Agents",
+        { type: "Order", id },
+        { type: "AssignmentCandidates", id },
+      ],
+    }),
     getPublicOrder: builder.query<PublicOrder, string>({
       query: (documentId) => `/orders/public/${documentId}`,
       providesTags: (_result, _error, documentId) => [
@@ -137,13 +173,16 @@ export const api = createApi({
 });
 
 export const {
+  useCancelOrderMutation,
   useCreateAgentMutation,
   useApproveRequestMutation,
   useGetAgentsQuery,
+  useGetAssignmentCandidatesQuery,
   useGetOrderQuery,
   useGetOrdersQuery,
   useGetPublicOrderQuery,
   useGetRequestQuery,
   useGetRequestsQuery,
   useLoginMutation,
+  useReassignOrderMutation,
 } = api;

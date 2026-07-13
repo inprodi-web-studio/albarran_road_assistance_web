@@ -5,7 +5,7 @@ export type RequestStatus =
   | "rejected"
   | "all";
 
-export type OrderStage = "opened" | "cancelled" | "completed" | "all";
+export type OrderStage = "opened" | "queued" | "cancelled" | "completed" | "all";
 
 export type ServiceType = "tire" | "battery" | "crane";
 
@@ -98,6 +98,42 @@ export type AgentLocation = {
   stale: boolean;
 };
 
+export type OrderEventType =
+  | "assigned"
+  | "queued"
+  | "activated"
+  | "reassigned"
+  | "completed"
+  | "cancelled";
+
+export type OrderEvent = {
+  id: number;
+  type: OrderEventType;
+  comment?: string | null;
+  metadata?: Record<string, unknown> | null;
+  actor?: Agent | null;
+  previousAgent?: Agent | null;
+  nextAgent?: Agent | null;
+  createdAt?: string;
+};
+
+export type AssignmentCandidate = {
+  agent: Agent;
+  agentLocation?: AgentLocation | null;
+  distanceMeters?: number | null;
+  locationStatus: "current" | "stale" | "missing";
+  activeOrderId?: number | null;
+  queuedCount: number;
+  canAssign: boolean;
+};
+
+export type AssignmentCandidatesResponse = {
+  data: AssignmentCandidate[];
+  meta: {
+    maxQueuedOrders: number;
+  };
+};
+
 export type AdminOrder = {
   id: number;
   documentId?: string;
@@ -105,9 +141,14 @@ export type AdminOrder = {
   subService?: string;
   autoInfo?: string;
   stage: Exclude<OrderStage, "all">;
+  queuePosition?: number | null;
   customer?: Customer | null;
   location?: Coordinates | null;
   agent?: Agent | null;
+  cancelledBy?: Agent | null;
+  cancelledAt?: string | null;
+  cancellationComment?: string | null;
+  events?: OrderEvent[];
   agentLocation?: AgentLocation | null;
   completedAt?: string | null;
   completionLocation?: Coordinates | null;

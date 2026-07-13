@@ -30,6 +30,7 @@ export const StatusBadge = (props: Props) => {
 
   const variants = {
     opened: "accent",
+    queued: "warning",
     completed: "success",
     cancelled: "danger",
   } as const;
