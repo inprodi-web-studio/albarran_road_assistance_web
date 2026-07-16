@@ -3,6 +3,7 @@ import { useAppSelector } from "@/app/hooks";
 import { AdminShell } from "@/routes/AdminShell";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { AgentsPage } from "@/features/agents/AgentsPage";
+import { AgentMonitorPage } from "@/features/monitor/AgentMonitorPage";
 import { OrderTrackingPage } from "@/features/orders/OrderTrackingPage";
 import { OrdersPage } from "@/features/orders/OrdersPage";
 import { RequestsPage } from "@/features/requests/RequestsPage";
@@ -28,6 +29,7 @@ export const App = () => (
       <Route element={<RequestsPage />} path={adminPaths.requests} />
       <Route element={<OrdersPage />} path={adminPaths.orders} />
       <Route element={<AgentsPage />} path={adminPaths.agents} />
+      <Route element={<AgentMonitorPage />} path={adminPaths.agentMonitor} />
     </Route>
     <Route element={<Navigate replace to={adminPaths.root} />} path="*" />
   </Routes>

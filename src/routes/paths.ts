@@ -4,4 +4,5 @@ export const adminPaths = {
   requests: "/admin/solicitudes",
   orders: "/admin/ordenes",
   agents: "/admin/agentes",
+  agentMonitor: "/admin/mapa",
 };

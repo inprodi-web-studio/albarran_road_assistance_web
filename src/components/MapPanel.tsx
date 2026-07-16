@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { googleMapsUrl } from "@/lib/utils";
+import { cn, googleMapsUrl } from "@/lib/utils";
 
 declare global {
   interface Window {
@@ -9,14 +9,20 @@ declare global {
   }
 }
 
-type MapPoint = {
+export type MapPoint = {
+  id?: string;
   label: string;
   latitude: number;
   longitude: number;
+  markerColor?: string;
+  markerLabel?: string;
 };
 
 type MapPanelProps = {
   points: MapPoint[];
+  className?: string;
+  connectPoints?: boolean;
+  fullscreenControl?: boolean;
 };
 
 let googleMapsPromise: Promise<void> | null = null;
@@ -43,7 +49,12 @@ const loadGoogleMaps = (apiKey: string) => {
   return googleMapsPromise;
 };
 
-export const MapPanel = ({ points }: MapPanelProps) => {
+export const MapPanel = ({
+  points,
+  className,
+  connectPoints = true,
+  fullscreenControl = false,
+}: MapPanelProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const mapRef = useRef<HTMLDivElement | null>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -83,7 +94,7 @@ export const MapPanel = ({ points }: MapPanelProps) => {
             center: { lat: firstPoint.latitude, lng: firstPoint.longitude },
             zoom: validPoints.length > 1 ? 13 : 16,
             mapTypeControl: false,
-            fullscreenControl: false,
+            fullscreenControl,
             streetViewControl: false,
           });
           googleMapRef.current = map;
@@ -102,11 +113,22 @@ export const MapPanel = ({ points }: MapPanelProps) => {
         const activeKeys = new Set<string>();
 
         validPoints.forEach((point, index) => {
-          const key = point.label;
+          const key = point.id || point.label;
           const position = {
             lat: point.latitude,
             lng: point.longitude,
           };
+          const icon = point.markerColor
+            ? {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                fillColor: point.markerColor,
+                fillOpacity: 1,
+                scale: 9,
+                strokeColor: "#ffffff",
+                strokeOpacity: 1,
+                strokeWeight: 2,
+              }
+            : undefined;
 
           activeKeys.add(key);
           bounds.extend(position);
@@ -115,7 +137,8 @@ export const MapPanel = ({ points }: MapPanelProps) => {
 
           if (existingMarker) {
             existingMarker.setPosition(position);
-            existingMarker.setLabel(String(index + 1));
+            existingMarker.setIcon(icon ?? null);
+            existingMarker.setLabel(point.markerLabel || String(index + 1));
             existingMarker.setTitle(point.label);
             return;
           }
@@ -125,7 +148,8 @@ export const MapPanel = ({ points }: MapPanelProps) => {
             new window.google.maps.Marker({
               map,
               position,
-              label: String(index + 1),
+              icon,
+              label: point.markerLabel || String(index + 1),
               title: point.label,
             }),
           );
@@ -138,7 +162,7 @@ export const MapPanel = ({ points }: MapPanelProps) => {
           }
         });
 
-        if (validPoints.length > 1) {
+        if (connectPoints && validPoints.length > 1) {
           const path = validPoints.map((point) => ({
               lat: point.latitude,
               lng: point.longitude,
@@ -174,11 +198,11 @@ export const MapPanel = ({ points }: MapPanelProps) => {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, validPoints]);
+  }, [apiKey, connectPoints, fullscreenControl, validPoints]);
 
   if (!apiKey || mapError || validPoints.length === 0) {
     return (
-      <div className="grid min-h-80 gap-3 rounded-lg border bg-muted/40 p-4">
+      <div className={cn("grid min-h-80 gap-3 rounded-lg border bg-muted/40 p-4", className)}>
         <div className="flex items-center gap-2 text-sm font-medium">
           <MapPin className="h-4 w-4 text-primary" />
           Ubicaciones
@@ -216,5 +240,5 @@ export const MapPanel = ({ points }: MapPanelProps) => {
     );
   }
 
-  return <div className="h-80 rounded-lg border" ref={mapRef} />;
+  return <div className={cn("h-80 rounded-lg border", className)} ref={mapRef} />;
 };

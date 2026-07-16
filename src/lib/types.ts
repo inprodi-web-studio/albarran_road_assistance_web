@@ -94,10 +94,39 @@ export type UpdateAgentPayload = Omit<CreateAgentPayload, "password">;
 export type AgentLocation = {
   latitude: number;
   longitude: number;
-  heading: number;
+  heading: number | null;
   updatedAt: string | null;
   estimatedTime: string | null;
   stale: boolean;
+};
+
+export type AgentLocationStatus = "current" | "stale" | "missing";
+
+export type AgentMonitorOrder = {
+  id: number;
+  documentId?: string;
+  stage: Exclude<OrderStage, "all">;
+  queuePosition?: number | null;
+  service?: ServiceType;
+  subService?: string;
+  customer?: Customer | null;
+  location?: Coordinates | null;
+  createdAt?: string;
+};
+
+export type AgentMonitor = Agent & {
+  agentLocation?: AgentLocation | null;
+  locationStatus: AgentLocationStatus;
+  activeOrder?: AgentMonitorOrder | null;
+  queuedOrders: AgentMonitorOrder[];
+};
+
+export type AgentMonitorResponse = {
+  data: AgentMonitor[];
+  meta: {
+    total: number;
+    refreshedAt: string;
+  };
 };
 
 export type OrderEventType =

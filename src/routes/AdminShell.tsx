@@ -1,5 +1,5 @@
-import { ClipboardList, LogOut, MapPinned, UserRoundPlus } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { ClipboardList, LogOut, Map, MapPinned, UserRoundPlus } from "lucide-react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/authSlice";
@@ -22,12 +22,19 @@ const navigation = [
     label: "Agentes",
     icon: UserRoundPlus,
   },
+  {
+    to: adminPaths.agentMonitor,
+    label: "Mapa",
+    icon: Map,
+  },
 ];
 
 export const AdminShell = () => {
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
+  const isAgentMonitor = location.pathname === adminPaths.agentMonitor;
 
   const onLogout = () => {
     dispatch(logout());
@@ -94,7 +101,13 @@ export const AdminShell = () => {
             </Button>
           </div>
         </header>
-        <main className="mx-auto grid max-w-7xl gap-5 p-4 pb-24 lg:p-6">
+        <main
+          className={cn(
+            isAgentMonitor
+              ? "h-[calc(100vh-8rem)] min-h-[32rem] lg:h-[calc(100vh-4rem)] lg:min-h-[38rem]"
+              : "mx-auto grid max-w-7xl gap-5 p-4 pb-24 lg:p-6",
+          )}
+        >
           <Outlet />
         </main>
       </div>

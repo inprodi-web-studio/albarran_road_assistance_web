@@ -7,6 +7,7 @@ import type { RootState } from "@/app/store";
 import type {
   AdminOrder,
   Agent,
+  AgentMonitorResponse,
   AgentStatus,
   AssignmentCandidatesResponse,
   AssistanceRequest,
@@ -162,6 +163,10 @@ export const api = createApi({
       }),
       providesTags: ["Agents"],
     }),
+    getAgentMonitor: builder.query<AgentMonitorResponse, void>({
+      query: () => "/admin/agents/monitor",
+      providesTags: ["Agents", "Orders"],
+    }),
     createAgent: builder.mutation<Agent, CreateAgentPayload>({
       query: (body) => ({
         url: "/admin/agents",
@@ -197,6 +202,7 @@ export const {
   useDeleteAgentMutation,
   useApproveRequestMutation,
   useGetAgentsQuery,
+  useGetAgentMonitorQuery,
   useGetAssignmentCandidatesQuery,
   useGetOrderQuery,
   useGetOrdersQuery,
