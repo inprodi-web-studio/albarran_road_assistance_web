@@ -5,6 +5,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Trash2,
   UserRoundPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +13,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   getErrorMessage,
   useCreateAgentMutation,
+  useDeleteAgentMutation,
   useGetAgentsQuery,
+  useUpdateAgentMutation,
 } from "@/lib/api";
-import type { Agent, AgentStatus, CreateAgentPayload } from "@/lib/types";
+import type {
+  Agent,
+  AgentStatus,
+  CreateAgentPayload,
+  UpdateAgentPayload,
+} from "@/lib/types";
 import { formatDate, formatPersonName } from "@/lib/utils";
 
 const pageSize = 12;
@@ -36,6 +51,14 @@ const emptyForm: CreateAgentPayload = {
   email: "",
   password: "",
 };
+
+const toEditForm = (agent: Agent): UpdateAgentPayload => ({
+  name: agent.name ?? "",
+  middleName: agent.middleName ?? "",
+  lastName: agent.lastName ?? "",
+  phone: agent.phone ?? "",
+  email: agent.email ?? "",
+});
 
 const AgentStatusBadge = ({ agent }: { agent: Agent }) => {
   if (agent.blocked || agent.status === "blocked") {
@@ -90,7 +113,13 @@ export const AgentsPage = () => {
   const [form, setForm] = useState<CreateAgentPayload>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [editForm, setEditForm] = useState<UpdateAgentPayload>(emptyForm);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [createAgent, { isLoading: isCreating }] = useCreateAgentMutation();
+  const [updateAgent, { isLoading: isUpdating }] = useUpdateAgentMutation();
+  const [deleteAgent, { isLoading: isDeleting }] = useDeleteAgentMutation();
   const { data, isFetching, isLoading, refetch } = useGetAgentsQuery({
     status,
     page,
@@ -108,6 +137,26 @@ export const AgentsPage = () => {
 
   const updateForm = (key: keyof CreateAgentPayload, value: string) => {
     setForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const openEditor = (agent: Agent) => {
+    setSelectedAgent(agent);
+    setEditForm(toEditForm(agent));
+    setEditError(null);
+    setDeleteConfirmation(false);
+  };
+
+  const closeEditor = () => {
+    setSelectedAgent(null);
+    setEditError(null);
+    setDeleteConfirmation(false);
+  };
+
+  const updateEditForm = (key: keyof UpdateAgentPayload, value: string) => {
+    setEditForm((current) => ({
       ...current,
       [key]: value,
     }));
@@ -132,6 +181,47 @@ export const AgentsPage = () => {
       setPage(1);
     } catch (error) {
       setFormError(getErrorMessage(error));
+    }
+  };
+
+  const onEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedAgent) {
+      return;
+    }
+
+    setEditError(null);
+
+    try {
+      await updateAgent({
+        id: selectedAgent.id,
+        body: {
+          name: editForm.name.trim(),
+          middleName: editForm.middleName?.trim() || undefined,
+          lastName: editForm.lastName.trim(),
+          phone: editForm.phone?.trim() || undefined,
+          email: editForm.email.trim().toLowerCase(),
+        },
+      }).unwrap();
+      closeEditor();
+    } catch (error) {
+      setEditError(getErrorMessage(error));
+    }
+  };
+
+  const onDelete = async () => {
+    if (!selectedAgent) {
+      return;
+    }
+
+    setEditError(null);
+
+    try {
+      await deleteAgent(selectedAgent.id).unwrap();
+      closeEditor();
+    } catch (error) {
+      setEditError(getErrorMessage(error));
     }
   };
 
@@ -304,7 +394,19 @@ export const AgentsPage = () => {
                   </tr>
                 ) : (
                   agents.map((agent) => (
-                    <tr className="border-t" key={agent.id}>
+                    <tr
+                      className="cursor-pointer border-t transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      key={agent.id}
+                      onClick={() => openEditor(agent)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openEditor(agent);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
                       <td className="table-cell">
                         <div className="font-medium">
                           {formatPersonName(agent)}
@@ -369,6 +471,139 @@ export const AgentsPage = () => {
           </div>
         </section>
       </section>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditor();
+          }
+        }}
+        open={Boolean(selectedAgent)}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar agente</DialogTitle>
+            <DialogDescription>
+              Actualiza la informacion de contacto y perfil operativo de {" "}
+              {selectedAgent ? formatPersonName(selectedAgent) : "este agente"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-4" onSubmit={onEditSubmit}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium">
+                Nombre
+                <Input
+                  onChange={(event) => updateEditForm("name", event.target.value)}
+                  required
+                  value={editForm.name}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Segundo nombre
+                <Input
+                  onChange={(event) =>
+                    updateEditForm("middleName", event.target.value)
+                  }
+                  value={editForm.middleName}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Apellido
+                <Input
+                  onChange={(event) =>
+                    updateEditForm("lastName", event.target.value)
+                  }
+                  required
+                  value={editForm.lastName}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Telefono
+                <Input
+                  autoComplete="tel"
+                  onChange={(event) => updateEditForm("phone", event.target.value)}
+                  type="tel"
+                  value={editForm.phone}
+                />
+              </label>
+            </div>
+            <label className="grid gap-2 text-sm font-medium">
+              Correo
+              <Input
+                autoComplete="email"
+                onChange={(event) => updateEditForm("email", event.target.value)}
+                required
+                type="email"
+                value={editForm.email}
+              />
+            </label>
+
+            {editError ? (
+              <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {editError}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+              <Button onClick={closeEditor} type="button" variant="outline">
+                Cerrar
+              </Button>
+              <Button disabled={isUpdating || isDeleting} type="submit">
+                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Guardar cambios
+              </Button>
+            </div>
+          </form>
+
+          <section className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-destructive">Eliminar agente</h3>
+            {selectedAgent?.isBusy ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                No puede eliminarse mientras tenga una orden activa o en cola.
+              </p>
+            ) : deleteConfirmation ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 p-3">
+                <p className="text-sm text-rose-800">
+                  Esta accion eliminara el agente y su acceso. No se puede deshacer.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    disabled={isDeleting}
+                    onClick={() => setDeleteConfirmation(false)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    disabled={isDeleting}
+                    onClick={onDelete}
+                    size="sm"
+                    type="button"
+                    variant="destructive"
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Eliminar definitivamente
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                className="mt-3"
+                disabled={isUpdating || isDeleting}
+                onClick={() => setDeleteConfirmation(true)}
+                type="button"
+                variant="destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar agente
+              </Button>
+            )}
+          </section>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

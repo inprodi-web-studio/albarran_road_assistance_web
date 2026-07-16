@@ -89,6 +89,8 @@ export type CreateAgentPayload = {
   password: string;
 };
 
+export type UpdateAgentPayload = Omit<CreateAgentPayload, "password">;
+
 export type AgentLocation = {
   latitude: number;
   longitude: number;

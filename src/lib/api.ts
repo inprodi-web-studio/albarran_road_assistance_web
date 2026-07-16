@@ -17,6 +17,7 @@ import type {
   PaginatedResponse,
   PublicOrder,
   RequestStatus,
+  UpdateAgentPayload,
 } from "@/lib/types";
 
 const apiBaseUrl =
@@ -169,12 +170,31 @@ export const api = createApi({
       }),
       invalidatesTags: ["Agents"],
     }),
+    updateAgent: builder.mutation<
+      Agent,
+      { id: number; body: UpdateAgentPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/admin/agents/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Agents"],
+    }),
+    deleteAgent: builder.mutation<{ id: number }, number>({
+      query: (id) => ({
+        url: `/admin/agents/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Agents"],
+    }),
   }),
 });
 
 export const {
   useCancelOrderMutation,
   useCreateAgentMutation,
+  useDeleteAgentMutation,
   useApproveRequestMutation,
   useGetAgentsQuery,
   useGetAssignmentCandidatesQuery,
@@ -185,4 +205,5 @@ export const {
   useGetRequestsQuery,
   useLoginMutation,
   useReassignOrderMutation,
+  useUpdateAgentMutation,
 } = api;
