@@ -7,7 +7,7 @@ export type RequestStatus =
 
 export type OrderStage = "opened" | "queued" | "cancelled" | "completed" | "all";
 
-export type ServiceType = "tire" | "battery" | "crane";
+export type ServiceType = "tire" | "battery" | "crane" | "home_service";
 
 export type AdminRole = {
   id?: number;

@@ -14,6 +14,7 @@ export const serviceLabels: Record<ServiceType, string> = {
   tire: "Llanta",
   battery: "Bateria",
   crane: "Grua",
+  home_service: "Servicio a domicilio",
 };
 
 export const requestStatusLabels: Record<Exclude<RequestStatus, "all">, string> =
