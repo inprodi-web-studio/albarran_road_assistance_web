@@ -10,6 +10,7 @@ import {
   Send,
   XCircle,
 } from "lucide-react";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +31,12 @@ import {
   useGetOrdersQuery,
   useReassignOrderMutation,
 } from "@/lib/api";
-import type { AdminOrder, OrderEventType, OrderStage } from "@/lib/types";
+import type {
+  AdminOrder,
+  AssignmentEligibilityReason,
+  OrderEventType,
+  OrderStage,
+} from "@/lib/types";
 import {
   formatDate,
   formatPersonName,
@@ -56,6 +62,24 @@ const eventLabels: Record<OrderEventType, string> = {
   completed: "Orden finalizada",
   cancelled: "Orden cancelada",
 };
+
+const eligibilityLabels: Record<AssignmentEligibilityReason, string> = {
+  invalid_global_schedule: "El horario global no es valido",
+  outside_global_schedule: "El servicio esta fuera del horario global",
+  invalid_agent_schedule: "El horario del agente no es valido",
+  outside_agent_schedule: "El agente esta fuera de turno",
+  unsupported_service: "El agente no tiene habilitado este servicio",
+  current_agent: "Es el agente asignado actualmente",
+  queue_full: "La cola del agente esta llena",
+};
+
+const overrideReasonKeys = new Set<AssignmentEligibilityReason>([
+  "invalid_global_schedule",
+  "outside_global_schedule",
+  "invalid_agent_schedule",
+  "outside_agent_schedule",
+  "unsupported_service",
+]);
 
 const LocationBadge = ({ order }: { order: AdminOrder }) => {
   if (!order.agentLocation) {
@@ -121,6 +145,7 @@ export const OrdersPage = () => {
   const [assignmentMode, setAssignmentMode] = useState<"automatic" | "manual">("automatic");
   const [agentId, setAgentId] = useState("");
   const [comment, setComment] = useState("");
+  const [confirmOverrides, setConfirmOverrides] = useState(false);
   const { data, isFetching, isLoading, refetch } = useGetOrdersQuery(
     { stage, page, pageSize },
     { pollingInterval: 15000 },
@@ -141,6 +166,9 @@ export const OrdersPage = () => {
   const pagination = data?.meta.pagination;
   const canManageOrder = selectedOrder?.stage === "opened" || selectedOrder?.stage === "queued";
   const candidates = candidatesResponse?.data ?? [];
+  const selectedCandidate = candidates.find((candidate) => String(candidate.agent.id) === agentId);
+  const selectedOverrideReasons = selectedCandidate?.eligibilityReasons.filter((reason) =>
+    overrideReasonKeys.has(reason)) ?? [];
 
   const mapPoints = useMemo(() => {
     if (!selectedOrder) {
@@ -174,6 +202,7 @@ export const OrdersPage = () => {
     setComment("");
     setAgentId("");
     setAssignmentMode("automatic");
+    setConfirmOverrides(false);
     setActionError(null);
   };
 
@@ -194,7 +223,7 @@ export const OrdersPage = () => {
         comment,
         ...(assignmentMode === "automatic"
           ? { automatic: true }
-          : { agentId: Number(agentId) }),
+          : { agentId: Number(agentId), confirmOverrides }),
       }).unwrap();
       resetAction();
     } catch (error) {
@@ -267,9 +296,18 @@ export const OrdersPage = () => {
                     <div className="text-xs text-muted-foreground">{order.customer?.phone || "Sin telefono"}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="font-medium">{formatPersonName(order.agent)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {order.stage === "queued" && order.queuePosition ? `Turno ${order.queuePosition}` : order.agent?.email || "Sin correo"}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <AgentAvatar
+                        className="h-9 w-9"
+                        name={formatPersonName(order.agent)}
+                        photo={order.agent?.photo}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium">{formatPersonName(order.agent)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {order.stage === "queued" && order.queuePosition ? `Turno ${order.queuePosition}` : order.agent?.email || "Sin correo"}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="table-cell">
@@ -322,7 +360,17 @@ export const OrdersPage = () => {
                   </div>
                   <dl className="grid gap-3 text-sm">
                     <div><dt className="text-muted-foreground">Cliente</dt><dd className="font-medium">{selectedOrder.customer?.name || "Sin cliente"}</dd></div>
-                    <div><dt className="text-muted-foreground">Agente</dt><dd className="font-medium">{formatPersonName(selectedOrder.agent)}</dd></div>
+                    <div>
+                      <dt className="text-muted-foreground">Agente</dt>
+                      <dd className="mt-1 flex items-center gap-2 font-medium">
+                        <AgentAvatar
+                          className="h-9 w-9"
+                          name={formatPersonName(selectedOrder.agent)}
+                          photo={selectedOrder.agent?.photo}
+                        />
+                        {formatPersonName(selectedOrder.agent)}
+                      </dd>
+                    </div>
                     {selectedOrder.stage === "queued" ? <div><dt className="text-muted-foreground">Posicion en cola</dt><dd className="font-medium">Turno {selectedOrder.queuePosition || "Sin registro"}</dd></div> : null}
                     <div><dt className="text-muted-foreground">Servicio</dt><dd className="font-medium">{getServiceLabel(selectedOrder.service)}</dd></div>
                     <div><dt className="text-muted-foreground">ETA</dt><dd className="font-medium">{selectedOrder.agentLocation?.estimatedTime || "Sin estimacion"}</dd></div>
@@ -348,23 +396,35 @@ export const OrdersPage = () => {
                       <div><p className="font-medium">Reasignar orden</p><p className="text-sm text-muted-foreground">Elige automaticamente o selecciona al agente.</p></div>
                       <Button onClick={resetAction} size="sm" variant="ghost">Cerrar</Button>
                     </div>
-                    <Select onChange={(event) => setAssignmentMode(event.target.value as "automatic" | "manual")} value={assignmentMode}>
+                    <Select onChange={(event) => { setAssignmentMode(event.target.value as "automatic" | "manual"); setAgentId(""); setConfirmOverrides(false); }} value={assignmentMode}>
                       <option value="automatic">Asignar automaticamente al mas cercano</option>
                       <option value="manual">Elegir agente manualmente</option>
                     </Select>
                     {assignmentMode === "manual" ? (
-                      <Select disabled={isFetchingCandidates} onChange={(event) => setAgentId(event.target.value)} value={agentId}>
+                      <Select disabled={isFetchingCandidates} onChange={(event) => { setAgentId(event.target.value); setConfirmOverrides(false); }} value={agentId}>
                         <option value="">{isFetchingCandidates ? "Buscando agentes..." : "Selecciona un agente"}</option>
                         {candidates.map((candidate) => (
-                          <option disabled={!candidate.canAssign} key={candidate.agent.id} value={candidate.agent.id}>
-                            {formatPersonName(candidate.agent)} - {formatMeters(candidate.distanceMeters)} - {candidate.queuedCount}/3 en espera{candidate.canAssign ? "" : " (No disponible)"}
+                          <option disabled={!candidate.manuallyAssignable} key={candidate.agent.id} value={candidate.agent.id}>
+                            {formatPersonName(candidate.agent)} - {formatMeters(candidate.distanceMeters)} - {candidate.queuedCount}/3 en espera{candidate.automaticallyEligible ? "" : candidate.manuallyAssignable ? " (Requiere excepcion)" : " (No disponible)"}
                           </option>
                         ))}
                       </Select>
                     ) : null}
+                    {assignmentMode === "manual" && selectedOverrideReasons.length ? (
+                      <div className="grid gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="font-medium">Esta reasignacion omite criterios automaticos:</p>
+                        <ul className="list-disc pl-5">
+                          {selectedOverrideReasons.map((reason) => <li key={reason}>{eligibilityLabels[reason]}</li>)}
+                        </ul>
+                        <label className="flex items-start gap-2">
+                          <input checked={confirmOverrides} className="mt-1" onChange={(event) => setConfirmOverrides(event.target.checked)} type="checkbox" />
+                          Confirmo la excepcion. El motivo quedara registrado en la linea del tiempo.
+                        </label>
+                      </div>
+                    ) : null}
                     <textarea className="min-h-24 rounded-md border bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" onChange={(event) => setComment(event.target.value)} placeholder="Motivo de la reasignacion" value={comment} />
                     {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
-                    <Button disabled={!comment.trim() || (assignmentMode === "manual" && !agentId) || isReassigning} onClick={handleReassign}>
+                    <Button disabled={!comment.trim() || (assignmentMode === "manual" && (!agentId || (selectedOverrideReasons.length > 0 && !confirmOverrides))) || isReassigning} onClick={handleReassign}>
                       {isReassigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Confirmar reasignacion
                     </Button>
                   </div>
@@ -411,6 +471,11 @@ export const OrdersPage = () => {
                           {event.previousAgent || event.nextAgent ? <p className="text-muted-foreground">{event.previousAgent ? `${formatPersonName(event.previousAgent)} -> ` : ""}{event.nextAgent ? formatPersonName(event.nextAgent) : "Sin agente"}</p> : null}
                           {event.actor ? <p className="text-xs text-muted-foreground">Por {formatPersonName(event.actor)}</p> : null}
                           {event.comment ? <p className="whitespace-pre-wrap text-muted-foreground">{event.comment}</p> : null}
+                          {Array.isArray(event.metadata?.overrideReasons) && event.metadata.overrideReasons.length ? (
+                            <p className="text-xs font-medium text-amber-700">
+                              Excepcion manual: {(event.metadata.overrideReasons as AssignmentEligibilityReason[]).map((reason) => eligibilityLabels[reason]).join(", ")}
+                            </p>
+                          ) : null}
                         </li>
                       ))}
                     </ol>

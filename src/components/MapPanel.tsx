@@ -23,6 +23,28 @@ type MapPanelProps = {
   className?: string;
   connectPoints?: boolean;
   fullscreenControl?: boolean;
+  routeMode?: "straight" | "driving";
+};
+
+type RoutePathPoint = google.maps.LatLngLiteral | google.maps.LatLng;
+
+type RouteResult = {
+  path?: RoutePathPoint[];
+};
+
+type RoutesLibrary = {
+  Route: {
+    computeRoutes: (request: {
+      destination: google.maps.LatLngLiteral;
+      fields: string[];
+      language: string;
+      origin: google.maps.LatLngLiteral;
+      polylineQuality: "HIGH_QUALITY";
+      routingPreference: "TRAFFIC_AWARE";
+      travelMode: "DRIVING";
+      units: "METRIC";
+    }) => Promise<{ routes: RouteResult[] }>;
+  };
 };
 
 let googleMapsPromise: Promise<void> | null = null;
@@ -54,6 +76,7 @@ export const MapPanel = ({
   className,
   connectPoints = true,
   fullscreenControl = false,
+  routeMode = "straight",
 }: MapPanelProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -63,6 +86,8 @@ export const MapPanel = ({
   const hasAutoFitRef = useRef(false);
   const hasUserMovedMapRef = useRef(false);
   const isProgrammaticMoveRef = useRef(false);
+  const routeRequestKeyRef = useRef<string | null>(null);
+  const routeRequestGenerationRef = useRef(0);
   const [mapError, setMapError] = useState(false);
   const validPoints = useMemo(
     () =>
@@ -81,7 +106,7 @@ export const MapPanel = ({
     let cancelled = false;
 
     loadGoogleMaps(apiKey)
-      .then(() => {
+      .then(async () => {
         if (cancelled || !mapRef.current || !window.google?.maps) {
           return;
         }
@@ -163,10 +188,64 @@ export const MapPanel = ({
         });
 
         if (connectPoints && validPoints.length > 1) {
-          const path = validPoints.map((point) => ({
+          const fallbackPath = validPoints.map((point) => ({
               lat: point.latitude,
               lng: point.longitude,
           }));
+
+          let path: RoutePathPoint[] = fallbackPath;
+
+          if (routeMode === "driving") {
+            const origin = fallbackPath[0];
+            const destination = fallbackPath[fallbackPath.length - 1];
+            const requestKey = [
+              origin.lat.toFixed(6),
+              origin.lng.toFixed(6),
+              destination.lat.toFixed(6),
+              destination.lng.toFixed(6),
+            ].join(":");
+
+            if (routeRequestKeyRef.current !== requestKey) {
+              routeRequestKeyRef.current = requestKey;
+              const requestGeneration = ++routeRequestGenerationRef.current;
+
+              try {
+                const routesLibrary = (await window.google.maps.importLibrary(
+                  "routes",
+                )) as unknown as RoutesLibrary;
+                const { routes } = await routesLibrary.Route.computeRoutes({
+                  origin,
+                  destination,
+                  travelMode: "DRIVING",
+                  routingPreference: "TRAFFIC_AWARE",
+                  polylineQuality: "HIGH_QUALITY",
+                  language: "es-MX",
+                  units: "METRIC",
+                  fields: ["path"],
+                });
+
+                if (
+                  cancelled ||
+                  requestGeneration !== routeRequestGenerationRef.current
+                ) {
+                  return;
+                }
+
+                if (routes[0]?.path?.length) {
+                  path = routes[0].path;
+                }
+              } catch (error) {
+                if (requestGeneration === routeRequestGenerationRef.current) {
+                  routeRequestKeyRef.current = null;
+                }
+                console.warn("Google Maps no pudo calcular la ruta.", error);
+              }
+            } else if (polylineRef.current) {
+              path = polylineRef.current.getPath().getArray();
+            }
+          }
+
+          path.forEach((point) => bounds.extend(point));
 
           if (polylineRef.current) {
             polylineRef.current.setPath(path);
@@ -198,7 +277,7 @@ export const MapPanel = ({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, connectPoints, fullscreenControl, validPoints]);
+  }, [apiKey, connectPoints, fullscreenControl, routeMode, validPoints]);
 
   if (!apiKey || mapError || validPoints.length === 0) {
     return (

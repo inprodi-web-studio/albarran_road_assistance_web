@@ -1,4 +1,4 @@
-import { ClipboardList, LogOut, Map, MapPinned, UserRoundPlus } from "lucide-react";
+import { ClipboardList, LogOut, Map, MapPinned, Settings2, UserRoundPlus } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,11 @@ const navigation = [
     to: adminPaths.agentMonitor,
     label: "Mapa",
     icon: Map,
+  },
+  {
+    to: adminPaths.settings,
+    label: "Configuracion",
+    icon: Settings2,
   },
 ];
 
@@ -111,12 +116,12 @@ export const AdminShell = () => {
           <Outlet />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t bg-white p-2 shadow-soft lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-white p-1 shadow-soft lg:hidden">
         {navigation.map((item) => (
           <NavLink
             className={({ isActive }) =>
               cn(
-                "flex h-11 items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground",
+                "flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-[10px] font-medium text-muted-foreground",
                 isActive && "bg-primary/10 text-primary",
               )
             }

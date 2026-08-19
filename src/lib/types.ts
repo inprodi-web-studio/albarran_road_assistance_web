@@ -9,6 +9,31 @@ export type OrderStage = "opened" | "queued" | "cancelled" | "completed" | "all"
 
 export type ServiceType = "tire" | "battery" | "crane" | "home_service";
 
+export type WeekDay =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export type ScheduleSlot = {
+  startTime: string;
+  endTime: string;
+};
+
+export type ScheduleDay = {
+  day: WeekDay;
+  allDay: boolean;
+  slots: ScheduleSlot[];
+};
+
+export type ServiceOption = {
+  key: ServiceType;
+  label: string;
+};
+
 export type AdminRole = {
   id?: number;
   name?: string;
@@ -44,6 +69,14 @@ export type Coordinates = {
   longitude: string | number;
 };
 
+export type AgentPhoto = {
+  id?: number;
+  url: string;
+  alternativeText?: string | null;
+  width?: number | null;
+  height?: number | null;
+};
+
 export type AssistanceRequest = {
   id: number;
   documentId?: string;
@@ -66,6 +99,7 @@ export type Agent = {
   middleName?: string;
   lastName?: string;
   phone?: string;
+  photo?: AgentPhoto | null;
   firebaseUid?: string;
   email?: string;
   username?: string;
@@ -73,6 +107,12 @@ export type Agent = {
   confirmed?: boolean;
   blocked?: boolean;
   status?: AgentStatus;
+  isOnShift?: boolean;
+  individualScheduleActive?: boolean;
+  scheduleValid?: boolean;
+  workSchedule?: ScheduleDay[];
+  services?: ServiceType[];
+  availabilityUpdatedBy?: AdminUser | null;
   role?: AdminRole | null;
   createdAt?: string;
   updatedAt?: string;
@@ -155,14 +195,41 @@ export type AssignmentCandidate = {
   locationStatus: "current" | "stale" | "missing";
   activeOrderId?: number | null;
   queuedCount: number;
+  globalOpen: boolean;
+  agentOnShift: boolean;
+  supportsService: boolean;
+  eligibilityReasons: AssignmentEligibilityReason[];
+  automaticallyEligible: boolean;
+  manuallyAssignable: boolean;
   canAssign: boolean;
 };
+
+export type AssignmentEligibilityReason =
+  | "invalid_global_schedule"
+  | "outside_global_schedule"
+  | "invalid_agent_schedule"
+  | "outside_agent_schedule"
+  | "unsupported_service"
+  | "current_agent"
+  | "queue_full";
 
 export type AssignmentCandidatesResponse = {
   data: AssignmentCandidate[];
   meta: {
     maxQueuedOrders: number;
   };
+};
+
+export type ScheduleSettings = {
+  timezone: string;
+  schedule: ScheduleDay[];
+  valid: boolean;
+  error?: string | null;
+  isOpen: boolean;
+  nextTransitionAt?: string | null;
+  services: ServiceOption[];
+  updatedAt?: string | null;
+  updatedBy?: AdminUser | null;
 };
 
 export type AdminOrder = {
@@ -195,6 +262,7 @@ export type PublicOrderAgent = {
   name?: string;
   lastName?: string;
   phone?: string;
+  photo?: AgentPhoto | null;
 };
 
 export type PublicOrderCustomer = {

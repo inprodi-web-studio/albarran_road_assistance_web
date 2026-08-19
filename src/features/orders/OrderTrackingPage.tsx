@@ -9,8 +9,8 @@ import {
   MapPinned,
   Phone,
   RefreshCw,
-  UserRound,
 } from "lucide-react";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPanel } from "@/components/MapPanel";
@@ -180,9 +180,11 @@ export const OrderTrackingPage = () => {
             <p className="text-sm text-muted-foreground">Tu agente</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
-                  <UserRound className="h-6 w-6" />
-                </div>
+                <AgentAvatar
+                  className="h-12 w-12"
+                  name={formatAgentName(order.agent)}
+                  photo={order.agent?.photo}
+                />
                 <div className="min-w-0">
                   <h1 className="break-words text-2xl font-semibold leading-tight">
                     {formatAgentName(order.agent)}
@@ -206,7 +208,7 @@ export const OrderTrackingPage = () => {
       </header>
 
       <section className="grid gap-3">
-        <MapPanel points={mapPoints} />
+        <MapPanel points={mapPoints} routeMode="driving" />
         {customerCoordinates ? (
           <Button asChild variant="outline">
             <a

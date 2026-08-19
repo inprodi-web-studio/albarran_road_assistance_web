@@ -7,6 +7,7 @@ import { AgentMonitorPage } from "@/features/monitor/AgentMonitorPage";
 import { OrderTrackingPage } from "@/features/orders/OrderTrackingPage";
 import { OrdersPage } from "@/features/orders/OrdersPage";
 import { RequestsPage } from "@/features/requests/RequestsPage";
+import { ScheduleSettingsPage } from "@/features/settings/ScheduleSettingsPage";
 import { adminPaths } from "@/routes/paths";
 
 const ProtectedRoutes = () => {
@@ -30,6 +31,7 @@ export const App = () => (
       <Route element={<OrdersPage />} path={adminPaths.orders} />
       <Route element={<AgentsPage />} path={adminPaths.agents} />
       <Route element={<AgentMonitorPage />} path={adminPaths.agentMonitor} />
+      <Route element={<ScheduleSettingsPage />} path={adminPaths.settings} />
     </Route>
     <Route element={<Navigate replace to={adminPaths.root} />} path="*" />
   </Routes>

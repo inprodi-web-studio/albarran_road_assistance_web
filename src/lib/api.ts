@@ -11,14 +11,14 @@ import type {
   AgentStatus,
   AssignmentCandidatesResponse,
   AssistanceRequest,
-  CreateAgentPayload,
   LoginPayload,
   LoginResponse,
   OrderStage,
   PaginatedResponse,
   PublicOrder,
   RequestStatus,
-  UpdateAgentPayload,
+  ScheduleDay,
+  ScheduleSettings,
 } from "@/lib/types";
 
 const apiBaseUrl =
@@ -61,7 +61,7 @@ export const getErrorMessage = (error: unknown) => {
 export const api = createApi({
   reducerPath: "adminApi",
   baseQuery,
-  tagTypes: ["Requests", "Request", "Orders", "Order", "Agents", "AssignmentCandidates"],
+  tagTypes: ["Requests", "Request", "Orders", "Order", "Agents", "AssignmentCandidates", "Settings"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginPayload>({
       query: (body) => ({
@@ -120,7 +120,13 @@ export const api = createApi({
     }),
     reassignOrder: builder.mutation<
       AdminOrder,
-      { id: number; comment: string; agentId?: number; automatic?: boolean }
+      {
+        id: number;
+        comment: string;
+        agentId?: number;
+        automatic?: boolean;
+        confirmOverrides?: boolean;
+      }
     >({
       query: ({ id, ...body }) => ({
         url: `/admin/orders/${id}/reassign`,
@@ -167,7 +173,22 @@ export const api = createApi({
       query: () => "/admin/agents/monitor",
       providesTags: ["Agents", "Orders"],
     }),
-    createAgent: builder.mutation<Agent, CreateAgentPayload>({
+    getScheduleSettings: builder.query<ScheduleSettings, void>({
+      query: () => "/admin/settings/schedule",
+      providesTags: ["Settings"],
+    }),
+    updateScheduleSettings: builder.mutation<
+      ScheduleSettings,
+      { schedule: ScheduleDay[] }
+    >({
+      query: (body) => ({
+        url: "/admin/settings/schedule",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Settings", "Agents", "AssignmentCandidates"],
+    }),
+    createAgent: builder.mutation<Agent, FormData>({
       query: (body) => ({
         url: "/admin/agents",
         method: "POST",
@@ -177,7 +198,7 @@ export const api = createApi({
     }),
     updateAgent: builder.mutation<
       Agent,
-      { id: number; body: UpdateAgentPayload }
+      { id: number; body: FormData }
     >({
       query: ({ id, body }) => ({
         url: `/admin/agents/${id}`,
@@ -209,7 +230,9 @@ export const {
   useGetPublicOrderQuery,
   useGetRequestQuery,
   useGetRequestsQuery,
+  useGetScheduleSettingsQuery,
   useLoginMutation,
   useReassignOrderMutation,
   useUpdateAgentMutation,
+  useUpdateScheduleSettingsMutation,
 } = api;

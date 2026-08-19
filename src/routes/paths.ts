@@ -5,4 +5,5 @@ export const adminPaths = {
   orders: "/admin/ordenes",
   agents: "/admin/agentes",
   agentMonitor: "/admin/mapa",
+  settings: "/admin/configuracion",
 };

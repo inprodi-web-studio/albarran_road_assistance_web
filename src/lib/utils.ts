@@ -33,7 +33,7 @@ export const orderStageLabels: Record<Exclude<OrderStage, "all">, string> = {
 };
 
 export const getServiceLabel = (service?: ServiceType) =>
-  service ? serviceLabels[service] : "Sin servicio";
+  service ? serviceLabels[service] || service : "Sin servicio";
 
 export const formatDate = (value?: string | null) => {
   if (!value) {
