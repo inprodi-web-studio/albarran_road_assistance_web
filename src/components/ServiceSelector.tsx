@@ -19,7 +19,7 @@ export const ServiceSelector = ({
       <p className="text-sm font-medium">Servicios habilitados</p>
       <div className="flex gap-2">
         <Button
-          disabled={disabled}
+          disabled={disabled || options.length === 0}
           onClick={() => onChange(options.map((option) => option.key))}
           size="sm"
           type="button"
@@ -39,7 +39,11 @@ export const ServiceSelector = ({
       </div>
     </div>
     <div className="grid gap-2 p-3 sm:grid-cols-2">
-      {options.map((option) => (
+      {options.length === 0 ? (
+        <p className="py-2 text-sm text-muted-foreground sm:col-span-2">
+          No hay servicios configurados en la API.
+        </p>
+      ) : options.map((option) => (
         <label
           className="flex min-h-10 items-center gap-3 rounded-md border px-3 py-2 text-sm font-medium"
           key={option.key}
