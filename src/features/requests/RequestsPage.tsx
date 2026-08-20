@@ -34,6 +34,7 @@ import {
 } from "@/lib/utils";
 
 const pageSize = 12;
+const pollingInterval = 30_000;
 
 const statusOptions: { label: string; value: RequestStatus }[] = [
   { label: "Pendientes", value: "pending" },
@@ -71,11 +72,14 @@ export const RequestsPage = () => {
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const { data, isFetching, isLoading, refetch } = useGetRequestsQuery({
-    status,
-    page,
-    pageSize,
-  });
+  const { data, isFetching, isLoading, refetch } = useGetRequestsQuery(
+    {
+      status,
+      page,
+      pageSize,
+    },
+    { pollingInterval },
+  );
   const { data: selectedRequest, isFetching: isFetchingDetail } =
     useGetRequestQuery(selectedId ?? 0, { skip: selectedId == null });
   const [approveRequest, { isLoading: isReviewing }] =
