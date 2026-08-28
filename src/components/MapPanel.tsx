@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, MapPin } from "lucide-react";
+import { AlertTriangle, ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, googleMapsUrl } from "@/lib/utils";
 
@@ -28,23 +28,12 @@ type MapPanelProps = {
 
 type RoutePathPoint = google.maps.LatLngLiteral | google.maps.LatLng;
 
-type RouteResult = {
-  path?: RoutePathPoint[];
-};
-
-type RoutesLibrary = {
-  Route: {
-    computeRoutes: (request: {
-      destination: google.maps.LatLngLiteral;
-      fields: string[];
-      language: string;
-      origin: google.maps.LatLngLiteral;
-      polylineQuality: "HIGH_QUALITY";
-      routingPreference: "TRAFFIC_AWARE";
-      travelMode: "DRIVING";
-      units: "METRIC";
-    }) => Promise<{ routes: RouteResult[] }>;
-  };
+type RoutesApiResponse = {
+  routes?: Array<{
+    polyline?: {
+      encodedPolyline?: string;
+    };
+  }>;
 };
 
 let googleMapsPromise: Promise<void> | null = null;
@@ -71,6 +60,73 @@ const loadGoogleMaps = (apiKey: string) => {
   return googleMapsPromise;
 };
 
+const computeDrivingRoute = async ({
+  apiKey,
+  destination,
+  origin,
+}: {
+  apiKey: string;
+  destination: google.maps.LatLngLiteral;
+  origin: google.maps.LatLngLiteral;
+}) => {
+  const response = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: {
+              latitude: origin.lat,
+              longitude: origin.lng,
+            },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destination.lat,
+              longitude: destination.lng,
+            },
+          },
+        },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+        polylineQuality: "HIGH_QUALITY",
+        polylineEncoding: "ENCODED_POLYLINE",
+        languageCode: "es-MX",
+        units: "METRIC",
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Routes API respondio ${response.status}.`);
+  }
+
+  const data = (await response.json()) as RoutesApiResponse;
+  const encodedPolyline = data.routes?.[0]?.polyline?.encodedPolyline;
+
+  if (!encodedPolyline) {
+    throw new Error("Routes API no devolvio una polilinea.");
+  }
+
+  const geometryLibrary = (await window.google?.maps.importLibrary(
+    "geometry",
+  )) as google.maps.GeometryLibrary | undefined;
+
+  if (!geometryLibrary) {
+    throw new Error("Google Maps Geometry no esta disponible.");
+  }
+
+  return geometryLibrary.encoding.decodePath(encodedPolyline);
+};
+
 export const MapPanel = ({
   points,
   className,
@@ -89,6 +145,7 @@ export const MapPanel = ({
   const routeRequestKeyRef = useRef<string | null>(null);
   const routeRequestGenerationRef = useRef(0);
   const [mapError, setMapError] = useState(false);
+  const [routeError, setRouteError] = useState(false);
   const validPoints = useMemo(
     () =>
       points.filter(
@@ -188,16 +245,16 @@ export const MapPanel = ({
         });
 
         if (connectPoints && validPoints.length > 1) {
-          const fallbackPath = validPoints.map((point) => ({
-              lat: point.latitude,
-              lng: point.longitude,
+          const straightPath = validPoints.map((point) => ({
+            lat: point.latitude,
+            lng: point.longitude,
           }));
 
-          let path: RoutePathPoint[] = fallbackPath;
+          let path: RoutePathPoint[] | null = straightPath;
 
           if (routeMode === "driving") {
-            const origin = fallbackPath[0];
-            const destination = fallbackPath[fallbackPath.length - 1];
+            const origin = straightPath[0];
+            const destination = straightPath[straightPath.length - 1];
             const requestKey = [
               origin.lat.toFixed(6),
               origin.lng.toFixed(6),
@@ -210,18 +267,10 @@ export const MapPanel = ({
               const requestGeneration = ++routeRequestGenerationRef.current;
 
               try {
-                const routesLibrary = (await window.google.maps.importLibrary(
-                  "routes",
-                )) as unknown as RoutesLibrary;
-                const { routes } = await routesLibrary.Route.computeRoutes({
+                const routePath = await computeDrivingRoute({
+                  apiKey,
                   origin,
                   destination,
-                  travelMode: "DRIVING",
-                  routingPreference: "TRAFFIC_AWARE",
-                  polylineQuality: "HIGH_QUALITY",
-                  language: "es-MX",
-                  units: "METRIC",
-                  fields: ["path"],
                 });
 
                 if (
@@ -231,25 +280,35 @@ export const MapPanel = ({
                   return;
                 }
 
-                if (routes[0]?.path?.length) {
-                  path = routes[0].path;
-                }
+                path = routePath;
+                setRouteError(false);
               } catch (error) {
-                if (requestGeneration === routeRequestGenerationRef.current) {
-                  routeRequestKeyRef.current = null;
+                if (
+                  cancelled ||
+                  requestGeneration !== routeRequestGenerationRef.current
+                ) {
+                  return;
                 }
+
+                routeRequestKeyRef.current = null;
+                setRouteError(true);
                 console.warn("Google Maps no pudo calcular la ruta.", error);
+                path = polylineRef.current?.getPath().getArray() ?? null;
               }
             } else if (polylineRef.current) {
               path = polylineRef.current.getPath().getArray();
+            } else {
+              path = null;
             }
+          } else {
+            setRouteError(false);
           }
 
-          path.forEach((point) => bounds.extend(point));
+          path?.forEach((point) => bounds.extend(point));
 
-          if (polylineRef.current) {
+          if (path && polylineRef.current) {
             polylineRef.current.setPath(path);
-          } else {
+          } else if (path) {
             polylineRef.current = new window.google.maps.Polyline({
               map,
               path,
@@ -319,5 +378,23 @@ export const MapPanel = ({
     );
   }
 
-  return <div className={cn("h-80 rounded-lg border", className)} ref={mapRef} />;
+  const map = (
+    <div className={cn("h-80 rounded-lg border", className)} ref={mapRef} />
+  );
+
+  if (routeMode !== "driving") {
+    return map;
+  }
+
+  return (
+    <div className="grid gap-2">
+      {map}
+      {routeError ? (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>No fue posible calcular la ruta. Mostramos las ubicaciones.</span>
+        </div>
+      ) : null}
+    </div>
+  );
 };
